@@ -1,0 +1,3 @@
+com\xxl\job\executor\sample\frameless\config\FrameLessXxlJobConfig.class
+com\xxl\job\executor\sample\frameless\FramelessApplication.class
+com\xxl\job\executor\sample\frameless\jobhandler\SampleXxlJob.class
