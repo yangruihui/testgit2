@@ -1,5 +1,6 @@
 package com.xxl.job.executor.service.jobhandler;
 
+import cn.hutool.http.HttpUtil;
 import com.xxl.job.core.context.XxlJobHelper;
 import com.xxl.job.core.handler.annotation.XxlJob;
 import net.sf.json.JSONObject;
@@ -296,51 +297,57 @@ public class SampleXxlJob {
         HttpURLConnection connection = null;
         BufferedReader bufferedReader = null;
         try {
+            XxlJobHelper.log("----------------"+url+"----------------------------------");
+            System.out.println("----------------"+url+"----------------------------------");
             // connection
-            URL realUrl = new URL(url);
-            connection = (HttpURLConnection) realUrl.openConnection();
-
-            // connection setting
-            connection.setRequestMethod(method);
-            connection.setDoOutput(isPostMethod);
-            connection.setDoInput(true);
-            connection.setUseCaches(false);
-//            connection.setReadTimeout(5 * 1000);
-//            connection.setConnectTimeout(3 * 1000);
-            connection.setRequestProperty("connection", "Keep-Alive");
-            connection.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
-            connection.setRequestProperty("Accept-Charset", "application/json;charset=UTF-8");
-
-            // do connection
-            connection.connect();
-
+//            URL realUrl = new URL(url);
+//            connection = (HttpURLConnection) realUrl.openConnection();
+//
+//            // connection setting
+//            connection.setRequestMethod(method);
+//            connection.setDoOutput(isPostMethod);
+//            connection.setDoInput(true);
+//            connection.setUseCaches(false);
+////            connection.setReadTimeout(5 * 1000);
+////            connection.setConnectTimeout(3 * 1000);
+//            connection.setRequestProperty("connection", "Keep-Alive");
+//            connection.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
+//            connection.setRequestProperty("Accept-Charset", "application/json;charset=UTF-8");
+//
+//            // do connection
+//            connection.connect();
+            String result = HttpUtil.post(url, "");
             // data
-            if (isPostMethod && data != null && data.trim().length() > 0) {
-                DataOutputStream dataOutputStream = new DataOutputStream(connection.getOutputStream());
-                dataOutputStream.write(data.getBytes("UTF-8"));
-                dataOutputStream.flush();
-                dataOutputStream.close();
-            }
-
-            // valid StatusCode
-            int statusCode = connection.getResponseCode();
-            if (statusCode != 200) {
-                throw new RuntimeException("Http Request StatusCode(" + statusCode + ") Invalid.");
-            }
-
-            // result
-            bufferedReader = new BufferedReader(new InputStreamReader(connection.getInputStream(), "UTF-8"));
-            StringBuilder result = new StringBuilder();
-            String line;
-            while ((line = bufferedReader.readLine()) != null) {
-                result.append(line);
-            }
+//            if (isPostMethod && data != null && data.trim().length() > 0) {
+//                DataOutputStream dataOutputStream = new DataOutputStream(connection.getOutputStream());
+//                dataOutputStream.write(data.getBytes("UTF-8"));
+//                dataOutputStream.flush();
+//                dataOutputStream.close();
+//            }
+//
+//            // valid StatusCode
+//            int statusCode = connection.getResponseCode();
+//            if (statusCode != 200) {
+//                throw new RuntimeException("Http Request StatusCode(" + statusCode + ") Invalid.");
+//            }
+//
+//            // result
+//            bufferedReader = new BufferedReader(new InputStreamReader(connection.getInputStream(), "UTF-8"));
+//            StringBuilder result = new StringBuilder();
+//            String line;
+//            while ((line = bufferedReader.readLine()) != null) {
+//                result.append(line);
+//            }
             String responseMsg = result.toString();
 
             JSONObject jsonObject = JSONObject.fromObject(responseMsg);
+            //失败
             if (!"SUCCESS".equals(jsonObject.getString("status"))) {
                 XxlJobHelper.handleFail(jsonObject.getString("message"));
+                return;
             }
+            //成功
+            XxlJobHelper.handleSuccess(jsonObject.getString("message"));
             XxlJobHelper.log(responseMsg);
 
             return;
