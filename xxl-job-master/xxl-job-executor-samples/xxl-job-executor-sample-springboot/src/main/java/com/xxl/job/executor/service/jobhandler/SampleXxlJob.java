@@ -339,15 +339,19 @@ public class SampleXxlJob {
 //                result.append(line);
 //            }
             String responseMsg = result.toString();
-
+            System.out.println(responseMsg);
             JSONObject jsonObject = JSONObject.fromObject(responseMsg);
+            String message = "";
+            if (jsonObject.containsKey("message")) {
+                message = jsonObject.getString("message");
+            }
             //失败
             if (!"SUCCESS".equals(jsonObject.getString("status"))) {
-                XxlJobHelper.handleFail(jsonObject.getString("message"));
+                XxlJobHelper.handleFail(message);
                 return;
             }
             //成功
-            XxlJobHelper.handleSuccess(jsonObject.getString("message"));
+            XxlJobHelper.handleSuccess(message);
             XxlJobHelper.log(responseMsg);
 
             return;
