@@ -87,6 +87,8 @@ public class SampleXxlJob {
         CallableStatement call= null;
         //执行sql语句
         PreparedStatement preparedStatement = null;
+        //结果集
+        ResultSet rs = null;
         try {
             Long start = System.currentTimeMillis();
             List<Object> resultList = new ArrayList<>();
@@ -137,7 +139,28 @@ public class SampleXxlJob {
                 //执行sql语句时替换sql中的参数
                 reorganizeSql(preparedStatement, count, paramSql);
                 //执行
-                preparedStatement.execute();
+                if (sql.startsWith("select")) {
+                    rs = preparedStatement.executeQuery();
+                    if (rs.next()) {
+                        int flag = rs.getInt("flag");
+                        String title = rs.getString("title");
+                        String contacts = rs.getString("contact");
+                        String messsage = rs.getString("message");
+                        if (flag > 0) {
+                            //发送邮件
+                            String[] contactList = contacts.split(",");
+                            if (contactList.length > 0) {
+                                for(String contact : contactList) {
+                                    System.out.println("开始给" + contact + "发送邮件");
+                                    sendEmail(title, contact, messsage);
+                                    System.out.println("给" + contact + "发送邮件结束");
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    preparedStatement.execute();
+                }
 
             }
             Long end = System.currentTimeMillis();
@@ -152,7 +175,7 @@ public class SampleXxlJob {
             if (isProcedure) {
                 release(connection, call, null);
             } else {
-                release(connection, preparedStatement, null);
+                release(connection, preparedStatement, rs);
             }
         }
     }
@@ -316,7 +339,13 @@ public class SampleXxlJob {
 //
 //            // do connection
 //            connection.connect();
-            String result = HttpUtil.post(url, "");
+            String requestBody = "";
+            JSONObject requestJsonObject = new JSONObject();
+            if (isPostMethod && data != null && data.trim().length() > 0) {
+                requestJsonObject = JSONObject.fromObject(data);
+            }
+            requestBody = requestJsonObject.toString();
+            String result = HttpUtil.post(url, requestBody);
             // data
 //            if (isPostMethod && data != null && data.trim().length() > 0) {
 //                DataOutputStream dataOutputStream = new DataOutputStream(connection.getOutputStream());
@@ -339,20 +368,20 @@ public class SampleXxlJob {
 //                result.append(line);
 //            }
             String responseMsg = result.toString();
+            XxlJobHelper.log(responseMsg);
             System.out.println(responseMsg);
-            JSONObject jsonObject = JSONObject.fromObject(responseMsg);
+            JSONObject returnJsonObject = JSONObject.fromObject(responseMsg);
             String message = "";
-            if (jsonObject.containsKey("message")) {
-                message = jsonObject.getString("message");
+            if (returnJsonObject.containsKey("message")) {
+                message = returnJsonObject.getString("message");
             }
             //失败
-            if (!"SUCCESS".equals(jsonObject.getString("status"))) {
+            if (!"SUCCESS".equals(returnJsonObject.getString("status"))) {
                 XxlJobHelper.handleFail(message);
                 return;
             }
             //成功
             XxlJobHelper.handleSuccess(message);
-            XxlJobHelper.log(responseMsg);
 
             return;
         } catch (Exception e) {
@@ -633,6 +662,41 @@ public class SampleXxlJob {
                 e.printStackTrace();
             }
         }
+    }
+
+    /**
+     * 发送邮件
+     * @param messageText 邮件内容
+     */
+    private String sendEmail(String title, String contact, String messageText) {
+        //http://10.75.0.41:7001/prpall/SendEMailServlet.action
+        String requestUrl = "http://10.65.0.45:7001/prpall/SendEMailServlet.action";
+        String requestBody = montageXml(title, contact, messageText);
+        String result = "";
+        try{
+            result = HttpUtil.post(requestUrl, requestBody);
+        } catch (Exception e){
+            e.printStackTrace();
+            throw e;
+        }
+        return result;
+    }
+
+    public static String montageXml(String title,String email, String message)
+    {
+        Map<String, String> map  = 	new HashMap<String,String>();
+        map.put("MESSAGE", message);
+        JSONObject json = new JSONObject();
+        json.put("keyword", "798b48f011252e1e8e5eb74eeb6726c5");
+        json.put("toadd", email);
+        json.put("sendflag", "1");
+        json.put("fileflag", "0");
+        json.put("htmlnum","template_6.ftl");
+        json.put("title", title);
+        json.put("params", map);
+        json.put("systemCode", "fapiao");
+
+        return json.toString();
     }
 
 

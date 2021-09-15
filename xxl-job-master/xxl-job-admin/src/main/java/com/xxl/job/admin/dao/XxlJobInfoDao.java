@@ -45,5 +45,7 @@ public interface XxlJobInfoDao {
 
 	public int scheduleUpdate(XxlJobInfo xxlJobInfo);
 
+	public List<XxlJobInfo> getStartedByTimerType(@Param("timerType")String timerType, @Param("id")int id);
+
 
 }

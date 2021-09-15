@@ -1,5 +1,6 @@
 package com.xxl.job.admin.service.impl;
 
+import com.fasterxml.jackson.databind.util.JSONPObject;
 import com.xxl.job.admin.core.cron.CronExpression;
 import com.xxl.job.admin.core.model.XxlJobGroup;
 import com.xxl.job.admin.core.model.XxlJobInfo;
@@ -327,11 +328,33 @@ public class XxlJobServiceImpl implements XxlJobService {
 			return new ReturnT<String>(ReturnT.FAIL_CODE, (I18nUtil.getString("schedule_type")+I18nUtil.getString("system_unvalid")) );
 		}
 
+		//针对自动终保任务判断总共又几个定时任务在跑，且当前定时任务的序号
+		if(xxlJobInfo.getExecutorParam() != null && !"".equals(xxlJobInfo.getExecutorParam()) && xxlJobInfo.getExecutorParam().contains("AutoEndData")){
+			List<XxlJobInfo> xxlJobInfoStartedList = xxlJobInfoDao.getStartedByTimerType("AutoEndData", xxlJobInfo.getId());
+			int started = 0;
+			int serialNo = 1;
+			if (xxlJobInfoStartedList != null) {
+				started = xxlJobInfoStartedList.size();
+			}
+			for(XxlJobInfo jobInfo : xxlJobInfoStartedList) {
+				StringBuffer executorParam = new StringBuffer(jobInfo.getExecutorParam());
+				executorParam.replace(executorParam.indexOf("\"serialNo\":") + 11, executorParam.indexOf(",\"autoEndDataCount\""), Integer.toString(serialNo - 1));
+				executorParam.replace(executorParam.indexOf("\"autoEndDataCount\":") + 19, executorParam.indexOf("}"), Integer.toString(started + 1));
+				jobInfo.setExecutorParam(executorParam.toString());
+				xxlJobInfoDao.update(jobInfo);
+				serialNo ++;
+			}
+			StringBuffer executorParamStart = new StringBuffer(xxlJobInfo.getExecutorParam());
+			executorParamStart.replace(executorParamStart.indexOf("\"serialNo\":") + 11, executorParamStart.indexOf(",\"autoEndDataCount\""), Integer.toString(serialNo - 1));
+			executorParamStart.replace(executorParamStart.indexOf("\"autoEndDataCount\":") + 19, executorParamStart.indexOf("}"), Integer.toString(started + 1));
+			xxlJobInfo.setExecutorParam(executorParamStart.toString());
+		}
+
 		xxlJobInfo.setTriggerStatus(1);
 //		xxlJobInfo.setTriggerLastTime(0);
 		xxlJobInfo.setTriggerNextTime(nextTriggerTime);
-
 		xxlJobInfo.setUpdateTime(new Date());
+
 		xxlJobInfoDao.update(xxlJobInfo);
 		return ReturnT.SUCCESS;
 	}
@@ -340,6 +363,27 @@ public class XxlJobServiceImpl implements XxlJobService {
 	public ReturnT<String> stop(int id) {
         XxlJobInfo xxlJobInfo = xxlJobInfoDao.loadById(id);
 
+		//针对自动终保任务判断总共又几个定时任务在跑，且当前定时任务的序号
+		if(xxlJobInfo.getExecutorParam() != null && !"".equals(xxlJobInfo.getExecutorParam()) && xxlJobInfo.getExecutorParam().contains("AutoEndData")){
+			List<XxlJobInfo> xxlJobInfoStartedList = xxlJobInfoDao.getStartedByTimerType("AutoEndData", xxlJobInfo.getId());
+			int started = 0;
+			int serialNo = 1;
+			if (xxlJobInfoStartedList != null) {
+				started = xxlJobInfoStartedList.size() + 1;
+			}
+			for(XxlJobInfo jobInfo : xxlJobInfoStartedList) {
+				StringBuffer executorParam = new StringBuffer(jobInfo.getExecutorParam());
+				executorParam.replace(executorParam.indexOf("\"serialNo\":") + 11, executorParam.indexOf(",\"autoEndDataCount\""), Integer.toString(serialNo - 1));
+				executorParam.replace(executorParam.indexOf("\"autoEndDataCount\":") + 19, executorParam.indexOf("}"), Integer.toString(started - 1));
+				jobInfo.setExecutorParam(executorParam.toString());
+				xxlJobInfoDao.update(jobInfo);
+				serialNo ++;
+			}
+			StringBuffer executorParamStop = new StringBuffer(xxlJobInfo.getExecutorParam());
+			executorParamStop.replace(executorParamStop.indexOf("\"serialNo\":") + 11, executorParamStop.indexOf(",\"autoEndDataCount\""), Integer.toString(0));
+			executorParamStop.replace(executorParamStop.indexOf("\"autoEndDataCount\":") + 19, executorParamStop.indexOf("}"), Integer.toString(1));
+			xxlJobInfo.setExecutorParam(executorParamStop.toString());
+		}
 		xxlJobInfo.setTriggerStatus(0);
 //		xxlJobInfo.setTriggerLastTime(0);
 		xxlJobInfo.setTriggerNextTime(0);
