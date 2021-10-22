@@ -6,6 +6,9 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.apache.tomcat.util.codec.binary.Base64;
+import org.dom4j.Document;
+import org.dom4j.DocumentHelper;
+import org.dom4j.Element;
 import org.json.JSONException;
 import org.json.JSONObject;
 import sun.security.provider.MD5;
@@ -231,6 +234,30 @@ public class Test {
 
         String s = "businessType";
         System.out.println(s.toUpperCase());
+
+        System.out.println(System.currentTimeMillis()/1000);
+
+        String responseXml = "";
+        Document document = DocumentHelper.createDocument();
+        document.setXMLEncoding("UTF-8");
+        Element claimResponseElement = document.addElement("claimResponse");
+        Element responseHeadElement = claimResponseElement.addElement("responseHead");
+        responseHeadElement.addElement("sign").setText("sign");
+        responseHeadElement.addElement("requestUUID").setText("requestUUID");
+        Element responseBodyElement = claimResponseElement.addElement("responseBody");
+        String responseTime = "";
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
+        responseTime = sdf.format(new Date());
+        responseBodyElement.addElement("responseTime").setText(responseTime);
+        responseBodyElement.addElement("resultFlag").setText("resultFlag");
+        responseBodyElement.addElement("resultMessage").setText("resultMessage");
+        System.out.println(responseBodyElement.getText() + "----");
+        responseXml = document.asXML();
+        System.out.println(responseXml);
+
+        String sssss = "16162021001701000034";
+        System.out.println("sssss = " + "B" + sssss);
+        System.out.println("sssss = " + sssss);
     }
 
     /**
